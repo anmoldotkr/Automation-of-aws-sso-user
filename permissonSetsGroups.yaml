@@ -1,0 +1,461 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Dynamically create SSO group and attach the correct permission set based on group level
+
+Parameters:
+  environment:
+    Type: String
+  product:
+    Type: String
+  service:
+    Type: String
+  groupName:
+    Type: String
+    Description: Group level to create and assign (L1, L2, L2-read, L3, L3-prod, L4, L5, s3-prod, automation)
+    AllowedValues: [L1, L2, L2-read-all, L3, L3-read-prod,L3-non-prod, L4, L5, prod-s3-automation]
+  identityStoreId:
+    Type: String
+    Description: The ID of the Identity Store associated with AWS SSO
+  instanceArn:
+    Type: String
+    Description: The ARN of the SSO Instance
+  accountIds:
+    Type: CommaDelimitedList
+    Description: List of AWS Account IDs for permission set assignment
+  applicationArns:
+    Type: CommaDelimitedList
+    Description: List of Applications for group
+
+Conditions:
+  IsL1: !Equals [!Ref groupName, "L1"]
+  IsL2: !Equals [!Ref groupName, "L2"]
+  IsL3: !Equals [!Ref groupName, "L3"]
+  IsL4: !Equals [!Ref groupName, "L4"]
+  IsL5: !Equals [!Ref groupName, "L5"]
+  IsL2ReadAll: !Equals [!Ref groupName, "L2-read-all"]
+  IsL3ReadProd: !Equals [!Ref groupName, "L3-read-prod"]
+  IsprodS3Automation: !Equals [!Ref groupName, "prod-s3-automation"]
+  IsL3NonProd: !Equals [!Ref groupName, "L3-non-prod"]
+
+Resources:
+  permissionSet:
+    Type: AWS::SSO::PermissionSet
+    Properties:
+      Name: !Sub "${groupName}-group"
+      InstanceArn: !Ref instanceArn
+      SessionDuration: PT8H
+      Description: !Sub "${groupName} permission set"
+      ManagedPolicies: 
+        !If
+          - IsL2
+          - [arn:aws:iam::aws:policy/ReadOnlyAccess]
+          - !If
+            - IsL3ReadProd
+            - [arn:aws:iam::aws:policy/ReadOnlyAccess]
+            - !If
+              - IsL5
+              - [arn:aws:iam::aws:policy/AdministratorAccess]
+              - !Ref "AWS::NoValue"
+      InlinePolicy: 
+        !If
+          - IsL1
+          - |
+            {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:ListAllMyBuckets",
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject",
+                    "s3:ListBucket",
+                    "s3:ListBucketVersions",
+                    "s3:GetBucketLocation",
+                    "s3:GetObjectVersion",
+                    "s3:PutObjectAcl",
+                    "s3:GetObjectAcl",
+                    "s3:DeleteObjectVersion"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudfront:CreateInvalidation",
+                    "cloudfront:GetInvalidation",
+                    "cloudfront:ListInvalidations",
+                    "cloudfront:GetDistribution",
+                    "cloudfront:ListDistributions"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          - !If
+            - IsL2
+            - |
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": [
+                      "s3:PutObject",
+                      "s3:DeleteObject",
+                      "s3:PutObjectAcl",
+                      "s3:RestoreObject",
+                      "s3:PutBucketPolicy",
+                      "s3:PutBucketAcl",
+                      "s3:PutBucketCors",
+                      "s3:PutBucketVersioning",
+                      "s3:PutLifecycleConfiguration",
+                      "s3:PutReplicationConfiguration",
+                      "s3:PutEncryptionConfiguration",
+                      "s3:Get*",
+                      "s3:List*",
+                      "s3:ListAllMyBuckets",
+                      "s3:ListBucketVersions",
+                      "s3:GetBucketLocation",
+                      "s3:GetObjectVersion",
+                      "s3:GetObjectAcl",
+                      "s3:DeleteObjectVersion"
+                    ],
+                    "Resource": "*"
+                  },
+                  {
+                    "Effect": "Allow",
+                    "Action": [
+                      "cloudfront:CreateInvalidation",
+                      "cloudfront:UpdateDistribution",
+                      "cloudfront:TagResource",
+                      "cloudfront:UntagResource",
+                      "cloudfront:Get*",
+                      "cloudfront:List*"
+                    ],
+                    "Resource": "*"
+                  }
+                ]
+              }
+            - !If
+              - IsL3NonProd
+              - |
+                {
+                  "Version":"2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect":"Allow",
+                      "Action": [
+                        "ecs:Describe*",
+                        "ecs:List*",
+                        "ecs:Get*",
+                        "ecs:Update*",
+                        "ecs:Submit*",
+                        "sns:Get*",
+                        "sns:List*",
+                        "sns:Set*",
+                        "iam:Get*",
+                        "iam:List*",
+                        "iam:Simulate*",
+                        "iam:Update*",
+                        "s3:Get*",
+                        "s3:List*",
+                        "s3:Put*",
+                        "sqs:Get*",
+                        "sqs:List*",
+                        "sqs:Receive*",
+                        "sqs:Send*",
+                        "lambda:Get*",
+                        "lambda:List*",
+                        "lambda:Update*",
+                        "lambda:Invoke*",
+                        "ec2:Describe*",
+                        "ec2:Get*",
+                        "ec2:Modify*",
+                        "ssm:Get*",
+                        "ssm:List*",
+                        "ssm:Describe*",
+                        "cloudformation:Describe*",
+                        "cloudformation:Get*",
+                        "cloudformation:List*",
+                        "cloudformation:Update*",
+                        "cloudwatch:Get*",
+                        "cloudwatch:List*",
+                        "cloudwatch:Describe*",
+                        "cloudwatch:Put*",
+                        "elasticloadbalancing:Describe*",
+                        "tag:Get*",
+                        "ecr:Get*",
+                        "ecr:List*",
+                        "ecr:BatchGet*",
+                        "ecr:Describe*",
+                        "elasticache:Describe*",
+                        "elasticache:List*",
+                        "secretsmanager:Get*",
+                        "secretsmanager:List*",
+                        "secretsmanager:Describe*",
+                        "logs:Get*",
+                        "logs:Describe*",
+                        "logs:List*",
+                        "logs:Put*",
+                        "es:Describe*",
+                        "es:Get*",
+                        "es:List*",
+                        "elasticfilesystem:Describe*",
+                        "rds:Describe*",
+                        "rds:List*",
+                        "cloudfront:Get*",
+                        "cloudfront:List*",
+                        "firehose:Describe*",
+                        "firehose:List*",
+                        "cognito:Get*",
+                        "cognito:List*",
+                        "cdn:Get*",
+                        "cdn:List*",
+                        "sts:Get*",
+                        "vpc:Describe*",
+                        "batch:Describe*",
+                        "batch:List*",
+                        "events:Describe*",
+                        "events:List*",
+                        "events:Put*",
+                        "acm:Get*",
+                        "acm:List*",
+                        "acm:Describe*",
+                        "kms:Get*",
+                        "kms:List*",
+                        "kms:Describe*"
+                      ],
+                      "Resource": "*"
+                    }
+                  ]
+                }
+              - !If
+                - IsL3
+                - |
+                  {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Deny",
+                        "Action": [
+                          "ecs:Delete*",
+                          "sns:Delete*",
+                          "iam:Delete*",
+                          "s3:Delete*",
+                          "sqs:Delete*",
+                          "lambda:Delete*",
+                          "ec2:Delete*",
+                          "ssm:Delete*",
+                          "cloudformation:Delete*",
+                          "cloudwatch:Delete*",
+                          "elasticloadbalancing:Delete*",
+                          "tag:Delete*",
+                          "ecr:Delete*",
+                          "elasticache:Delete*",
+                          "secretsmanager:Delete*",
+                          "logs:Delete*",
+                          "es:Delete*",
+                          "elasticfilesystem:Delete*",
+                          "rds:Delete*",
+                          "cloudfront:Delete*",
+                          "firehose:Delete*",
+                          "cognito:Delete*",
+                          "cdn:Delete*",
+                          "sts:Delete*",
+                          "vpc:Delete*",
+                          "batch:Delete*",
+                          "events:Delete*",
+                          "acm:Delete*",
+                          "kms:Delete*"
+                        ],
+                        "Resource": "*"
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "ecs:*",
+                          "sns:*",
+                          "iam:*",
+                          "s3:*",
+                          "sqs:*",
+                          "lambda:*",
+                          "ec2:*",
+                          "ssm:*",
+                          "cloudformation:*",
+                          "cloudwatch:*",
+                          "elasticloadbalancing:*",
+                          "tag:*",
+                          "ecr:*",
+                          "elasticache:*",
+                          "secretsmanager:*",
+                          "logs:*",
+                          "es:*",
+                          "elasticfilesystem:*",
+                          "rds:*",
+                          "cloudfront:*",
+                          "firehose:*",
+                          "cognito:*",
+                          "cdn:*",
+                          "sts:*",
+                          "vpc:*",
+                          "batch:*",
+                          "events:*",
+                          "acm:*",
+                          "kms:*",
+                          "dynamodb:GetItem",
+                          "dynamodb:Query",
+                          "dynamodb:Scan"
+                        ],
+                        "Resource": "*"
+                      }
+                    ]
+                  }
+                - !If
+                  - IsL4
+                  - |
+                    {
+                      "Version":"2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect":"Allow",
+                          "Action": [
+                            "ecr:*",
+                            "ecs:*",
+                            "sns:*",
+                            "iam:*",
+                            "s3:*",
+                            "sqs:*",
+                            "lambda:*",
+                            "ec2:*",
+                            "ssm:*",
+                            "cloudformation:*",
+                            "cloudwatch:*",
+                            "elasticloadbalancing:*",
+                            "tag:*",
+                            "ecr:*",
+                            "elasticache:*",
+                            "secretsmanager:*",
+                            "logs:*",
+                            "es:*",
+                            "elasticfilesystem:*",
+                            "rds:*",
+                            "cloudfront:*",
+                            "firehose:*",
+                            "cognito:*",
+                            "cdn:*",
+                            "sts:*",
+                            "vpc:*",
+                            "batch:*",
+                            "sqs:*",
+                            "events:*",
+                            "acm:*",
+                            "kms:*",
+                            "dynamodb:*",
+                            "route53:*",
+                            "route53domains:*",
+                            "sso:*",
+                            "sso-directory:*",
+                            "sso-admin:*",
+                            "identitystore:*"
+                          ],
+                          "Resource": "*"
+                        }
+                      ]
+                    }
+                  - !If
+                    - IsprodS3Automation
+                    - |
+                      {
+                        "Version":"2012-10-17",
+                        "Statement": [
+                          {
+                            "Effect": "Allow",
+                            "Action": "s3:ListAllMyBuckets",
+                            "Resource": "*"
+                          },
+                          {
+                            "Effect":"Deny",
+                            "Action": [
+                              "s3:ListBucket",
+                              "s3:GetObject",
+                              "s3:PutObject",
+                              "s3:DeleteObject"
+                            ],
+                            "Resource": "arn:aws:s3:::*",
+                            "Condition": {
+                              "StringNotEquals": {
+                                "s3:bucketname": [
+                                  "prod-extv-analytics-dash",
+                                  "prod-rivittv-automation",
+                                  "prod-extv-sso-pagehealth"
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "Effect": "Allow",
+                            "Action": [
+                              "s3:ListBucket"
+                            ],
+                            "Resource": [
+                                "arn:aws:s3:::prod-extv-analytics-dash",
+                                "arn:aws:s3:::prod-extv-sso-pagehealth",
+                                "arn:aws:s3:::prod-rivittv-automation"
+                            ]
+                          },
+                          {
+                            "Effect": "Allow",
+                            "Action": [
+                              "s3:GetObject",
+                              "s3:PutObject",
+                              "s3:DeleteObject"
+                            ],
+                            "Resource": [
+                                "arn:aws:s3:::prod-extv-analytics-dash/*",
+                                "arn:aws:s3:::prod-extv-sso-pagehealth/*",
+                                "arn:aws:s3:::prod-rivittv-automation/*"
+                            ]
+                          },
+                          {
+                              "Effect": "Allow",
+                              "Action": [
+                                  "secretsmanager:GetSecretValue",
+                                  "secretsmanager:DescribeSecret",
+                                  "secretsmanager:UpdateSecret",
+                                  "secretsmanager:PutSecretValue"
+                              ],
+                              "Resource": "arn:aws:secretsmanager:us-west-2:905242614883:secret:prod/db_config-uIDUII"
+                          },
+                          {
+                              "Effect": "Allow",
+                              "Action": "secretsmanager:ListSecrets",
+                              "Resource": "*"
+                          }
+                        ]
+                      }
+                    - !Ref "AWS::NoValue"
+
+  ssoGroupAssignment:
+    Type: Custom::SSOGroupAssignment
+    Properties:
+      ServiceToken: !ImportValue
+        "Fn::Sub": "${environment}-${product}-createSsoGroup-lambda"
+      GroupName: !Sub "${groupName}-group"
+      PermissionSetArn: !GetAtt permissionSet.PermissionSetArn
+      IdentityStoreId: !Ref identityStoreId
+      InstanceArn: !Ref instanceArn
+      AccountIds: !Ref accountIds
+      ApplicationArns: !Ref applicationArns
+
+Outputs:
+  groupName:
+    Description: Name of the created SSO group
+    Value: !Sub "${groupName}-group"
+    Export:
+      Name: !Sub "${environment}-${product}-${groupName}-group"
+  permissionSetArn:
+    Description: ARN of the permission set created
+    Value: !GetAtt permissionSet.PermissionSetArn
+    Export:
+      Name: !Sub "${environment}-${product}-${groupName}-permissionSet"
