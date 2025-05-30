@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create SSO User using custom Resource
+
+Parameters:
+  environment:
+    Type: String
+  product:
+    Type: String
+  service:
+    Type: String
+  identityStoreId:
+    Type: String
+    Description: The ID of the identity store where the user will be created.
+  userName:
+    Type: String
+    Description: The username for the new SSO user.
+  userEmail:
+    Type: String
+    Description: The email address for the new SSO user.
+  firstName:
+    Type: String
+    Description: The first name of the new SSO user.
+  lastName:
+    Type: String
+    Description: The last name of the new SSO user.
+  displayName:
+    Type: String
+    Description: The display name for the new SSO user.
+  groupName:
+    Type: CommaDelimitedList
+    Description: The name of the group to add the user to.
+
+Resources:
+  createSsoUser:
+    Type: Custom::SSOUser
+    Properties:
+      ServiceToken: !ImportValue 
+        'Fn::Sub': '${environment}-${product}-createSsoUser-lambda'
+      IdentityStoreId: !Ref identityStoreId
+      UserName: !Ref userName
+      UserEmail: !Ref userEmail
+      FirstName: !Ref firstName
+      LastName: !Ref lastName
+      DisplayName: !Ref displayName
+      GroupName: !Ref groupName
+
+Outputs:
+  ssoUserName:
+    Description: "The username of the created SSO user."
+    Value: !Ref userName
+    Export:
+      Name: !Sub "${environment}-${product}-${userName}"
