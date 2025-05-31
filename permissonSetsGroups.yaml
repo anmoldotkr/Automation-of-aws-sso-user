@@ -399,9 +399,9 @@ Resources:
                               "s3:ListBucket"
                             ],
                             "Resource": [
-                                "arn:aws:s3:::prod-extv-analytics-dash",
-                                "arn:aws:s3:::prod-extv-sso-pagehealth",
-                                "arn:aws:s3:::prod-rivittv-automation"
+                                "arn:aws:s3:::bucket1",
+                                "arn:aws:s3:::bucket2",
+                                "arn:aws:s3:::bucket3"
                             ]
                           },
                           {
@@ -412,9 +412,9 @@ Resources:
                               "s3:DeleteObject"
                             ],
                             "Resource": [
-                                "arn:aws:s3:::prod-extv-analytics-dash/*",
-                                "arn:aws:s3:::prod-extv-sso-pagehealth/*",
-                                "arn:aws:s3:::prod-rivittv-automation/*"
+                                "arn:aws:s3:::bucket1/*",
+                                "arn:aws:s3:::bucket2/*",
+                                "arn:aws:s3:::bucket3/*"
                             ]
                           },
                           {
