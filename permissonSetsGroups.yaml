@@ -425,7 +425,7 @@ Resources:
                                   "secretsmanager:UpdateSecret",
                                   "secretsmanager:PutSecretValue"
                               ],
-                              "Resource": "arn:aws:secretsmanager:us-west-2:905242614883:secret:prod/db_config-uIDUII"
+                              "Resource": "arn:aws:secretsmanager:us-west-2:xxxxxxxxxxxxx:secret:prod/xxxxxxxxxxxx"
                           },
                           {
                               "Effect": "Allow",
