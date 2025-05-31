@@ -386,9 +386,9 @@ Resources:
                             "Condition": {
                               "StringNotEquals": {
                                 "s3:bucketname": [
-                                  "prod-extv-analytics-dash",
-                                  "prod-rivittv-automation",
-                                  "prod-extv-sso-pagehealth"
+                                  "bucket1",
+                                  "bucket2",
+                                  "bucket3"
                                 ]
                               }
                             }
