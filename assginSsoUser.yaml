@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Manage SSO User Group Memberships using Custom Resource
+
+Parameters:
+  environment:
+    Type: String
+  product:
+    Type: String
+  service:
+    Type: String
+  identityStoreId:
+    Type: String
+    Description: The ID of the identity store where the user will be created.
+  userName:
+    Type: CommaDelimitedList
+    Description: Use comma separated for multiple username.
+  groupName:
+    Type: String
+    Description: The name of the group to add the user to.
+  operation:
+    Type: String
+    Description: "Operation to perform: 'add' or 'remove' users"
+    AllowedValues: [add, remove]
+
+Resources:
+  ManageSSOUserGroupMembership:
+    Type: Custom::SSOUserGroupMembership
+    Properties:
+      ServiceToken: !ImportValue 
+        'Fn::Sub': '${environment}-${product}-assignUser-lambda'
+      IdentityStoreId: !Ref identityStoreId
+      Usernames: !Ref userName
+      GroupName: !Ref groupName
+      Operation: !Ref operation
